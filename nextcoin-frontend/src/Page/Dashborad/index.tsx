@@ -1,13 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-
-  // Data (mock for now)
-  const [projects, setProjects] = useState<
-    Array<{ id: string; name: string; updatedAt: string }>
-  >([]);
 
   // UI state
   const [helpOpen, setHelpOpen] = useState(false);
@@ -23,9 +18,17 @@ export default function Dashboard() {
     budget: "",
     position: "",
     skills: "",
-    salary: "",
+    salary: "50000",
   });
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   function onCreate() {
     setOpen(true);
@@ -34,6 +37,16 @@ export default function Dashboard() {
   function closeModal() {
     setOpen(false);
     setTouched({});
+    setForm({
+      name: "",
+      objectives: "",
+      start: "",
+      end: "",
+      budget: "",
+      position: "",
+      skills: "",
+      salary: "",
+    });
   }
 
   function onKeyDown(e: React.KeyboardEvent) {
@@ -44,11 +57,31 @@ export default function Dashboard() {
     setForm((f) => ({ ...f, [key]: v }));
   }
 
+  // logout
+  function handleLogout() {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("token_type");
+    localStorage.removeItem("user_info");
+    navigate("/login");
+  }
+
+  // check all require
+  const allRequiredFilled = !!(
+    form.name &&
+    form.objectives &&
+    form.start &&
+    form.end &&
+    form.budget &&
+    form.position &&
+    form.skills
+  );
+
   // Minimal validations
   const errors = {
     name: touched.name && !form.name ? "Project name is required" : "",
-    objectives: "",
-    start: touched.start && !form.start ? "Start date required" : "",
+    objectives:
+      touched.objectives && !form.objectives ? "Objectives are required" : "",
+    start: touched.start && !form.start ? "Start date is required" : "",
     end:
       touched.end &&
       form.start &&
@@ -56,31 +89,62 @@ export default function Dashboard() {
       new Date(form.end) < new Date(form.start)
         ? "End date must be after start"
         : touched.end && !form.end
-        ? "End date required"
+        ? "End date is required"
         : "",
+    budget: touched.budget && !form.budget ? "Budget is required" : "",
+    position:
+      touched.position && !form.position ? "Required position is required" : "",
+    skills:
+      touched.skills && !form.skills ? "Required skills are required" : "",
+    salary: "",
   } as const;
 
-  const invalid = !!(errors.name || errors.start || errors.end);
+  const hasErrors = !!(
+    errors.name ||
+    errors.objectives ||
+    errors.start ||
+    errors.end ||
+    errors.budget ||
+    errors.position ||
+    errors.skills
+  );
 
-  function submitForm(e: React.FormEvent) {
+  // button condition
+  const shouldDisableButton = !allRequiredFilled || hasErrors || submitting;
+
+  // submit
+  async function submitForm(e: React.FormEvent) {
     e.preventDefault();
-    setTouched({ name: true, start: true, end: true });
-    if (invalid) return;
 
-    const id = Math.random().toString(36).slice(2, 8);
-    setProjects((ps) => [
-      ...ps,
-      { id, name: form.name, updatedAt: new Date().toISOString() },
-    ]);
-    closeModal();
-    navigate(`/projects/${id}`);
+    if (!allRequiredFilled || hasErrors) {
+      setTouched({
+        name: true,
+        objectives: true,
+        start: true,
+        end: true,
+        budget: true,
+        position: true,
+        skills: true,
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      alert("Project created successfully!");
+      closeModal();
+    } catch (error: any) {
+      console.error("Failed to create project:", error);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <div style={styles.page}>
-      {/* Top navbar: 4 columns = brand | title | helps | menu */}
+      {/* Top navbar*/}
       <header style={styles.header}>
-        <div style={styles.brand}>Nextcoin</div>
+        <div style={styles.brand}>NextCoin</div>
         <h1 style={styles.navTitle}>Projects</h1>
         <button style={styles.navLinkBtn} onClick={() => setHelpOpen(true)}>
           Helps
@@ -104,7 +168,7 @@ export default function Dashboard() {
               <button
                 role="menuitem"
                 style={styles.menuItem}
-                onClick={() => navigate("/login")}
+                onClick={handleLogout}
               >
                 Logout
               </button>
@@ -115,32 +179,15 @@ export default function Dashboard() {
 
       {/* Main content */}
       <main style={styles.main}>
-        {projects.length === 0 ? (
-          <section style={styles.emptyWrap}>
-            <button style={styles.cta} onClick={onCreate}>
-              <span style={styles.ctaIcon}>★</span>
-              Create New Project
-            </button>
-            <p style={styles.hint}>
-              No projects yet. Click the button to start your first one.
-            </p>
-          </section>
-        ) : (
-          <section style={styles.grid}>
-            {projects.map((p) => (
-              <article key={p.id} style={styles.card}>
-                <h3 style={styles.cardTitle}>{p.name}</h3>
-                <p style={styles.cardMeta}>
-                  Updated {new Date(p.updatedAt).toLocaleString()}
-                </p>
-                <div style={styles.cardActions}>
-                  <button style={styles.cardBtn}>Open</button>
-                  <button style={styles.cardBtnSecondary}>⋯</button>
-                </div>
-              </article>
-            ))}
-          </section>
-        )}
+        <section style={styles.emptyWrap}>
+          <button style={styles.cta} onClick={onCreate}>
+            <span style={styles.ctaIcon}>★</span>
+            Create New Project
+          </button>
+          <p style={styles.hint}>
+            No projects yet. Click the button to start your first one.
+          </p>
+        </section>
       </main>
 
       {/* Help card modal */}
@@ -211,38 +258,64 @@ export default function Dashboard() {
 
             <form onSubmit={submitForm} noValidate>
               {/* Project name */}
-              <label style={modalStyles.label}>Project name</label>
-              <input
-                type="text"
-                placeholder="enter project name"
-                value={form.name}
-                onChange={(e) => setField("name", e.target.value)}
-                onBlur={() => setTouched((t) => ({ ...t, name: true }))}
-                style={{
-                  ...modalStyles.input,
-                  ...(errors.name ? modalStyles.inputError : {}),
-                }}
-                required
-              />
+              <label style={modalStyles.label}>Project name *</label>
+              <div style={modalStyles.inputWrapper}>
+                <input
+                  type="text"
+                  placeholder="enter project name"
+                  value={form.name}
+                  onChange={(e) => setField("name", e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+                  style={{
+                    ...modalStyles.inputWithMic,
+                    ...(errors.name ? modalStyles.inputError : {}),
+                  }}
+                  required
+                />
+                <button
+                  type="button"
+                  style={modalStyles.micButton}
+                  onClick={() => console.log("Voice input for name")}
+                >
+                  🎙️
+                </button>
+              </div>
               {errors.name && (
                 <div style={modalStyles.error}>{errors.name}</div>
               )}
 
               {/* Objectives */}
-              <label style={modalStyles.label}>Objectives</label>
-              <textarea
-                placeholder="enter project keyword"
-                rows={3}
-                value={form.objectives}
-                onChange={(e) => setField("objectives", e.target.value)}
-                style={modalStyles.textarea}
-              />
+              <label style={modalStyles.label}>Objectives *</label>
+              <div style={modalStyles.inputWrapper}>
+                <textarea
+                  placeholder="enter project description and objectives"
+                  rows={3}
+                  value={form.objectives}
+                  onChange={(e) => setField("objectives", e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, objectives: true }))}
+                  style={{
+                    ...modalStyles.textareaWithMic,
+                    ...(errors.objectives ? modalStyles.inputError : {}),
+                  }}
+                  required
+                />
+                <button
+                  type="button"
+                  style={modalStyles.micButtonTextarea}
+                  onClick={() => console.log("Voice input for objectives")}
+                >
+                  🎙️
+                </button>
+              </div>
+              {errors.objectives && (
+                <div style={modalStyles.error}>{errors.objectives}</div>
+              )}
 
               {/* Timeline */}
               <div style={modalStyles.sectionHeader}>Timeline</div>
               <div style={modalStyles.row}>
                 <div style={modalStyles.col}>
-                  <label style={modalStyles.label}>Start date</label>
+                  <label style={modalStyles.label}>Start date *</label>
                   <input
                     type="date"
                     value={form.start}
@@ -252,13 +325,14 @@ export default function Dashboard() {
                       ...modalStyles.input,
                       ...(errors.start ? modalStyles.inputError : {}),
                     }}
+                    required
                   />
                   {errors.start && (
                     <div style={modalStyles.error}>{errors.start}</div>
                   )}
                 </div>
                 <div style={modalStyles.col}>
-                  <label style={modalStyles.label}>End date</label>
+                  <label style={modalStyles.label}>End date *</label>
                   <input
                     type="date"
                     value={form.end}
@@ -268,6 +342,7 @@ export default function Dashboard() {
                       ...modalStyles.input,
                       ...(errors.end ? modalStyles.inputError : {}),
                     }}
+                    required
                   />
                   {errors.end && (
                     <div style={modalStyles.error}>{errors.end}</div>
@@ -276,44 +351,107 @@ export default function Dashboard() {
               </div>
 
               {/* Budget */}
-              <label style={modalStyles.label}>Budget</label>
-              <input
-                type="text"
-                placeholder="e.g. $60,000–$100,000"
+              <label style={modalStyles.label}>Budget *</label>
+              <select
                 value={form.budget}
                 onChange={(e) => setField("budget", e.target.value)}
-                style={modalStyles.input}
-              />
+                onBlur={() => setTouched((t) => ({ ...t, budget: true }))}
+                style={{
+                  ...modalStyles.select,
+                  ...(errors.budget ? modalStyles.inputError : {}),
+                }}
+                required
+              >
+                <option value="">Select budget range</option>
+                <option value="under-10k">Under $10,000</option>
+                <option value="10k-25k">$10,000 - $25,000</option>
+                <option value="25k-50k">$25,000 - $50,000</option>
+                <option value="50k-100k">$50,000 - $100,000</option>
+                <option value="100k-250k">$100,000 - $250,000</option>
+                <option value="250k-500k">$250,000 - $500,000</option>
+                <option value="500k-1m">$500,000 - $1,000,000</option>
+                <option value="over-1m">Over $1,000,000</option>
+              </select>
+              {errors.budget && (
+                <div style={modalStyles.error}>{errors.budget}</div>
+              )}
 
               {/* Position */}
-              <label style={modalStyles.label}>Position</label>
-              <input
-                type="text"
-                placeholder="enter needs position"
-                value={form.position}
-                onChange={(e) => setField("position", e.target.value)}
-                style={modalStyles.input}
-              />
+              <label style={modalStyles.label}>Required Position *</label>
+              <div style={modalStyles.inputWrapper}>
+                <input
+                  type="text"
+                  placeholder="enter required position/role"
+                  value={form.position}
+                  onChange={(e) => setField("position", e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, position: true }))}
+                  style={{
+                    ...modalStyles.inputWithMic,
+                    ...(errors.position ? modalStyles.inputError : {}),
+                  }}
+                  required
+                />
+                <button
+                  type="button"
+                  style={modalStyles.micButton}
+                  onClick={() => console.log("Voice input for position")}
+                >
+                  🎙️
+                </button>
+              </div>
+              {errors.position && (
+                <div style={modalStyles.error}>{errors.position}</div>
+              )}
 
               {/* Skills */}
-              <label style={modalStyles.label}>Skills</label>
-              <input
-                type="text"
-                placeholder="enter needs skills"
-                value={form.skills}
-                onChange={(e) => setField("skills", e.target.value)}
-                style={modalStyles.input}
-              />
+              <label style={modalStyles.label}>Required Skills *</label>
+              <div style={modalStyles.inputWrapper}>
+                <input
+                  type="text"
+                  placeholder="enter required skills"
+                  value={form.skills}
+                  onChange={(e) => setField("skills", e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, skills: true }))}
+                  style={{
+                    ...modalStyles.inputWithMic,
+                    ...(errors.skills ? modalStyles.inputError : {}),
+                  }}
+                  required
+                />
+                <button
+                  type="button"
+                  style={modalStyles.micButton}
+                  onClick={() => console.log("Voice input for skills")}
+                >
+                  🎙️
+                </button>
+              </div>
+              {errors.skills && (
+                <div style={modalStyles.error}>{errors.skills}</div>
+              )}
 
               {/* Salary */}
-              <label style={modalStyles.label}>Salary</label>
-              <input
-                type="text"
-                placeholder="e.g. $70,000–$90,000"
-                value={form.salary}
-                onChange={(e) => setField("salary", e.target.value)}
-                style={modalStyles.input}
-              />
+              <label style={modalStyles.label}>
+                Salary Range: ${parseInt(form.salary).toLocaleString()} - $
+                {(parseInt(form.salary) + 20000).toLocaleString()}
+              </label>
+              <div style={modalStyles.salaryContainer}>
+                <span style={modalStyles.salaryLabel}>$30K</span>
+                <input
+                  type="range"
+                  min="30000"
+                  max="200000"
+                  step="5000"
+                  value={form.salary}
+                  onChange={(e) => setField("salary", e.target.value)}
+                  style={modalStyles.slider}
+                />
+                <span style={modalStyles.salaryLabel}>$200K</span>
+              </div>
+              <p style={modalStyles.salaryHint}>
+                Selected range: ${parseInt(form.salary).toLocaleString()} - $
+                {(parseInt(form.salary) + 20000).toLocaleString()} per year
+              </p>
 
               {/* Actions */}
               <div style={modalStyles.actions}>
@@ -321,18 +459,28 @@ export default function Dashboard() {
                   type="button"
                   onClick={closeModal}
                   style={modalStyles.btnSecondary}
+                  disabled={submitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={invalid}
+                  disabled={shouldDisableButton}
                   style={{
                     ...modalStyles.btnPrimary,
-                    ...(invalid ? modalStyles.btnDisabled : {}),
+                    ...(shouldDisableButton ? modalStyles.btnDisabled : {}),
                   }}
+                  title={
+                    !allRequiredFilled
+                      ? "Please fill in all required fields"
+                      : ""
+                  }
                 >
-                  Generate Brief
+                  {submitting
+                    ? "Creating..."
+                    : !allRequiredFilled
+                    ? "Fill Required Fields"
+                    : "Create Project"}
                 </button>
               </div>
             </form>
@@ -355,9 +503,9 @@ const styles: Record<string, React.CSSProperties> = {
   header: {
     height: 72,
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr auto", // 4 columns: brand | title | helps | menu
+    gridTemplateColumns: "1fr 1fr 1fr auto",
     alignItems: "center",
-    padding: "0 16px",
+    paddingLeft: "6%",
     borderBottom: "1px solid rgba(0,0,0,0.08)",
     backdropFilter: "blur(6px)",
     gap: 16,
@@ -365,7 +513,7 @@ const styles: Record<string, React.CSSProperties> = {
   brand: {
     justifySelf: "start",
     fontSize: 40,
-    fontStyle: "italic",
+    fontFamily: "'Pacifico', cursive",
     fontWeight: 700,
     color: "#0f172a",
   },
@@ -389,7 +537,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   menuBtn: {
     background: "transparent",
-
+    border: "none",
     height: 36,
     width: 36,
     display: "grid",
@@ -420,9 +568,36 @@ const styles: Record<string, React.CSSProperties> = {
   },
   main: {
     flex: 1,
-    display: "grid",
-    placeItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
+  },
+  loading: {
+    fontSize: 18,
+    color: "#64748b",
+    padding: 40,
+  },
+  errorBanner: {
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    color: "#b91c1c",
+    padding: "12px 16px",
+    borderRadius: 8,
+    marginBottom: 16,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 800,
+  },
+  errorClose: {
+    background: "transparent",
+    border: "none",
+    fontSize: 18,
+    cursor: "pointer",
+    color: "#b91c1c",
   },
   emptyWrap: {
     display: "flex",
@@ -446,9 +621,33 @@ const styles: Record<string, React.CSSProperties> = {
   },
   ctaIcon: { fontSize: 20 },
   hint: { color: "#334155", marginTop: 6 },
-  grid: {
+  gridWrap: {
     width: "100%",
     maxWidth: 1100,
+  },
+  gridHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  gridTitle: {
+    fontSize: 24,
+    fontWeight: 600,
+    color: "#0f172a",
+    margin: 0,
+  },
+  createBtn: {
+    background: "#3b66c6",
+    color: "white",
+    border: "none",
+    padding: "10px 16px",
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
     gap: 16,
@@ -497,7 +696,7 @@ const helpStyles: Record<string, React.CSSProperties> = {
     position: "relative",
     width: "min(560px, 92vw)",
     background: "#fff",
-
+    borderRadius: 12,
     boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
     padding: 18,
   },
@@ -509,7 +708,7 @@ const helpStyles: Record<string, React.CSSProperties> = {
     height: 28,
     display: "grid",
     placeItems: "center",
-
+    borderRadius: 6,
     background: "#fff",
     fontSize: 18,
   },
@@ -551,7 +750,12 @@ const modalStyles: Record<string, React.CSSProperties> = {
     padding: 24,
   },
   title: { textAlign: "center", fontSize: 28, margin: "4px 0 18px" },
-  label: { fontSize: 14, fontWeight: 600, margin: "12px 0 6px" },
+  label: {
+    fontSize: 14,
+    fontWeight: 600,
+    margin: "12px 0 6px",
+    display: "block",
+  },
   input: {
     width: "100%",
     height: 40,
@@ -560,6 +764,7 @@ const modalStyles: Record<string, React.CSSProperties> = {
     padding: "0 12px",
     fontSize: 14,
     background: "#fff",
+    boxSizing: "border-box",
   },
   inputError: {
     borderColor: "#ef4444",
@@ -573,6 +778,7 @@ const modalStyles: Record<string, React.CSSProperties> = {
     padding: 12,
     fontSize: 14,
     resize: "vertical",
+    boxSizing: "border-box",
   },
   sectionHeader: {
     marginTop: 20,
@@ -606,5 +812,101 @@ const modalStyles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     cursor: "pointer",
   },
-  btnDisabled: { opacity: 0.6, cursor: "not-allowed" },
+  btnDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
+    background: "#94a3b8",
+  },
+  salaryContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    margin: "8px 0",
+  },
+  salaryLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: 600,
+    minWidth: "40px",
+  },
+  slider: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    background: "#e2e8f0",
+    outline: "none",
+    appearance: "none",
+    cursor: "pointer",
+  },
+  salaryHint: {
+    fontSize: 12,
+    color: "#64748b",
+    margin: "4px 0 0 0",
+    fontStyle: "italic",
+  },
+  select: {
+    width: "100%",
+    height: 40,
+    borderRadius: 8,
+    border: "1px solid #d1d5db",
+    padding: "0 12px",
+    fontSize: 14,
+    background: "#fff",
+    boxSizing: "border-box",
+    cursor: "pointer",
+  },
+  inputWrapper: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+  },
+  inputWithMic: {
+    width: "100%",
+    height: 40,
+    borderRadius: 8,
+    border: "1px solid #d1d5db",
+    padding: "0 40px 0 12px",
+    fontSize: 14,
+    background: "#fff",
+    boxSizing: "border-box",
+  },
+  textareaWithMic: {
+    width: "100%",
+    minHeight: 80,
+    borderRadius: 8,
+    border: "1px solid #d1d5db",
+    padding: "12px 40px 12px 12px",
+    fontSize: 14,
+    resize: "vertical",
+    boxSizing: "border-box",
+  },
+  micButton: {
+    position: "absolute",
+    right: 8,
+    top: "50%",
+    transform: "translateY(-50%)",
+    background: "transparent",
+    border: "none",
+    fontSize: 16,
+    cursor: "pointer",
+    padding: 4,
+    borderRadius: 4,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  micButtonTextarea: {
+    position: "absolute",
+    right: 8,
+    top: 12,
+    background: "transparent",
+    border: "none",
+    fontSize: 16,
+    cursor: "pointer",
+    padding: 4,
+    borderRadius: 4,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 };

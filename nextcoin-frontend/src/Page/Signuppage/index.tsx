@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import api from "../../utils/api";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export default function SignupPage() {
   // --- validations ---
   const nameError = (() => {
     if (!touched.name) return "";
-    if (!name) return "Name is required";
+    if (!name) return "Company name is required";
     if (name.trim().length < 2) return "Please enter at least 2 characters";
     return "";
   })();
@@ -57,6 +58,7 @@ export default function SignupPage() {
     !passwordError &&
     !confirmError;
 
+  // Form submission
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setTouched({ name: true, email: true, password: true, confirm: true });
@@ -65,11 +67,32 @@ export default function SignupPage() {
 
     try {
       setLoading(true);
-      await mockSignup({ name, email, password });
-      // Change this to navigate('/login') if you prefer going to login after signup
-      navigate("/dashboard");
+
+      await api.auth.register(email, password, name);
+
+      const loginResponse = await api.auth.login(email, password);
+
+      if (loginResponse.access_token) {
+        localStorage.setItem("access_token", loginResponse.access_token);
+        localStorage.setItem(
+          "token_type",
+          loginResponse.token_type || "bearer"
+        );
+
+        if (loginResponse.user_info) {
+          localStorage.setItem(
+            "user_info",
+            JSON.stringify(loginResponse.user_info)
+          );
+        }
+
+        navigate("/dashboard");
+      } else {
+        throw new Error("Login failed after registration");
+      }
     } catch (err: any) {
-      setServerError(err?.message || "Signup failed");
+      console.error("Registration error:", err);
+      setServerError(err?.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -78,7 +101,7 @@ export default function SignupPage() {
   return (
     <div style={styles.page}>
       <header style={styles.header}>
-        <h1 style={styles.logo}>Nextcoin</h1>
+        <h1 style={styles.logo}>NextCoin</h1>
       </header>
 
       <main style={styles.main}>
@@ -92,14 +115,14 @@ export default function SignupPage() {
 
         <section style={styles.card}>
           <form onSubmit={onSubmit} style={styles.form} noValidate>
-            {/* Name */}
+            {/* Company Name */}
             <label htmlFor="name" style={styles.label}>
-              Name
+              Company Name
             </label>
             <input
               id="name"
               type="text"
-              placeholder="Enter Fullname"
+              placeholder="Enter company name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, name: true }))}
@@ -199,22 +222,7 @@ export default function SignupPage() {
   );
 }
 
-// Mock signup API
-async function mockSignup(payload: {
-  name: string;
-  email: string;
-  password: string;
-}) {
-  await new Promise((r) => setTimeout(r, 600));
-  if (!payload.email || !/[^\s@]+@[^\s@]+\.[^\s@]+/.test(payload.email)) {
-    throw new Error("Invalid email");
-  }
-  if (payload.password.length < 6) {
-    throw new Error("Password too short");
-  }
-}
-
-// Styles (aligned with LoginPage)
+// Styles
 const styles: Record<string, React.CSSProperties> = {
   page: {
     display: "flex",
@@ -230,7 +238,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   logo: {
     fontSize: 42,
-    fontStyle: "italic",
+    fontFamily: "'Pacifico', cursive",
     fontWeight: 700,
     color: "#0f172a",
   },

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import api from "../../utils/api";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function LoginPage() {
   const emailError = (() => {
     if (!touched.email) return "";
     if (!email) return "Email is required";
-    const ok = /[^\\s@]+@[^\\s@]+\\.[^\\s@]+/.test(email);
+    const ok = /[^\s@]+@[^\s@]+\.[^\s@]+/.test(email);
     return ok ? "" : "Please enter a valid email";
   })();
 
@@ -36,10 +37,22 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
-      await mockLogin(email, password);
-      navigate("/dashboard");
+
+      const response = await api.auth.login(email, password);
+
+      if (response.access_token) {
+        localStorage.setItem("access_token", response.access_token);
+        localStorage.setItem("token_type", response.token_type || "bearer");
+        if (response.user_info) {
+          localStorage.setItem("user_info", JSON.stringify(response.user_info));
+        }
+        navigate("/dashboard");
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (err: any) {
-      setServerError(err?.message || "Login failed");
+      console.error("Login error:", err);
+      setServerError(err?.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -48,7 +61,7 @@ export default function LoginPage() {
   return (
     <div style={styles.page}>
       <header style={styles.header}>
-        <h1 style={styles.logo}>Nextcoin</h1>
+        <h1 style={styles.logo}>NextCoin</h1>
       </header>
 
       <main style={styles.main}>
@@ -117,7 +130,7 @@ export default function LoginPage() {
             </button>
 
             <p style={styles.signupText}>
-              Don’t have an account yet?{" "}
+              Don't have an account yet?{" "}
               <Link to="/signup" style={styles.link}>
                 Sign up
               </Link>
@@ -127,14 +140,6 @@ export default function LoginPage() {
       </main>
     </div>
   );
-}
-
-// Mock login validation
-async function mockLogin(email: string, password: string) {
-  await new Promise((r) => setTimeout(r, 500));
-  if (!/@unsw\\.edu\\.au$/i.test(email) || password.length < 6) {
-    throw new Error("Invalid email or password");
-  }
 }
 
 // Styles
@@ -153,7 +158,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   logo: {
     fontSize: 42,
-    fontStyle: "italic",
+    fontFamily: "'Pacifico', cursive",
     fontWeight: 700,
     color: "#0f172a",
   },
