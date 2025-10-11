@@ -1,0 +1,17 @@
+[
+  {
+    "email": "shenlizhu@me.com",
+    "password_hash": "$2b$12$aRGEc3PcT9CkOD9wtNVbP.7riBCGu8j01hMcPKR8VD5I6dw1kTdua",
+    "company_name": "zayn"
+  },
+  {
+    "email": "732136@lerch.ovh",
+    "password_hash": "$2b$12$YWQ3Oal5LrH0OyxaJOkPUOJhvXAhDuUyHOVkg6A5h51HBUgBGu7fy",
+    "company_name": "ZAYN"
+  },
+  {
+    "email": "z5486888@ad.unsw.edu.au",
+    "password_hash": "$2b$12$6XrqnlyWF/BoQ.r/J/ycGuE5ukx7VypYAnwFoyynZ4puyest.c3R6",
+    "company_name": "zayn"
+  }
+]
