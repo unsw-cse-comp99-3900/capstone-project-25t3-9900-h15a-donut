@@ -23,6 +23,9 @@ export default function SignupPage() {
   const nameError = (() => {
     if (!touched.name) return "";
     if (!name) return "Company name is required";
+    if (!name.trim())
+      return "Company name cannot be empty or contain only spaces";
+    if (name.includes(" ")) return "Company name cannot contain spaces";
     if (name.trim().length < 2) return "Please enter at least 2 characters";
     return "";
   })();
@@ -30,21 +33,29 @@ export default function SignupPage() {
   const emailError = (() => {
     if (!touched.email) return "";
     if (!email) return "Email is required";
-    const ok = /[^\s@]+@[^\s@]+\.[^\s@]+/.test(email);
+    if (!email.trim()) return "Email cannot be empty or contain only spaces";
+    if (email.includes(" ")) return "Email cannot contain spaces";
+    const ok = /[^\s@]+@[^\s@]+\.[^\s@]+/.test(email.trim());
     return ok ? "" : "Please enter a valid email";
   })();
 
   const passwordError = (() => {
     if (!touched.password) return "";
     if (!password) return "Password is required";
-    if (password.length < 6) return "At least 6 characters";
+    if (!password.trim())
+      return "Password cannot be empty or contain only spaces";
+    if (password.includes(" ")) return "Password cannot contain spaces";
+    if (password.trim().length < 6) return "At least 6 characters";
     return "";
   })();
 
   const confirmError = (() => {
     if (!touched.confirm) return "";
     if (!confirm) return "Please re-enter your password";
-    if (confirm !== password) return "Passwords do not match";
+    if (!confirm.trim())
+      return "Confirm password cannot be empty or contain only spaces";
+    if (confirm.includes(" ")) return "Confirm password cannot contain spaces";
+    if (confirm.trim() !== password.trim()) return "Passwords do not match";
     return "";
   })();
 
@@ -53,6 +64,10 @@ export default function SignupPage() {
     !!email &&
     !!password &&
     !!confirm &&
+    !!name.trim() &&
+    !!email.trim() &&
+    !!password.trim() &&
+    !!confirm.trim() &&
     !nameError &&
     !emailError &&
     !passwordError &&
