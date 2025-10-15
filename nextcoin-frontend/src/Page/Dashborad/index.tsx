@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [open, setOpen] = useState(false);
+  const [logoutMessage, setLogoutMessage] = useState<string | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -59,10 +60,14 @@ export default function Dashboard() {
 
   // logout
   function handleLogout() {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("token_type");
-    localStorage.removeItem("user_info");
-    navigate("/login");
+    setLogoutMessage("Logout successful~");
+
+    setTimeout(() => {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("token_type");
+      localStorage.removeItem("user_info");
+      navigate("/login");
+    }, 1500);
   }
 
   // check all require
@@ -179,6 +184,11 @@ export default function Dashboard() {
 
       {/* Main content */}
       <main style={styles.main}>
+        {/* Logout success message */}
+        {logoutMessage && (
+          <div style={styles.logoutMessage}>{logoutMessage}</div>
+        )}
+
         <section style={styles.emptyWrap}>
           <button style={styles.cta} onClick={onCreate}>
             <span style={styles.ctaIcon}>★</span>
@@ -677,6 +687,22 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     border: "none",
     cursor: "pointer",
+  },
+  logoutMessage: {
+    position: "fixed",
+    top: "50px",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    backgroundColor: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+    color: "#16a34a",
+    fontSize: 16,
+    padding: "16px 24px",
+    borderRadius: 12,
+    boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
+    zIndex: 100,
+    textAlign: "center",
+    fontWeight: 600,
   },
 };
 

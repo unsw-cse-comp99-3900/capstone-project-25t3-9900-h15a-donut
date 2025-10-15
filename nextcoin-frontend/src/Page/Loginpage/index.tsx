@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [touched, setTouched] = useState({ email: false, password: false });
 
   // Validation
@@ -33,6 +34,7 @@ export default function LoginPage() {
     e.preventDefault();
     setTouched({ email: true, password: true });
     setServerError(null);
+    setSuccessMessage(null);
     if (!formValid) return;
 
     try {
@@ -46,7 +48,12 @@ export default function LoginPage() {
         if (response.user_info) {
           localStorage.setItem("user_info", JSON.stringify(response.user_info));
         }
-        navigate("/dashboard");
+
+        setSuccessMessage("Login successful~ Loading...");
+
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 1500);
       } else {
         throw new Error("Invalid response from server");
       }
@@ -113,6 +120,11 @@ export default function LoginPage() {
             />
             {passwordError && (
               <div style={styles.inlineError}>{passwordError}</div>
+            )}
+
+            {/* Success message */}
+            {successMessage && (
+              <div style={styles.successMessage}>{successMessage}</div>
             )}
 
             {/* Server-side error */}
@@ -219,6 +231,17 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#ef4444",
     fontSize: 12,
     marginTop: 6,
+  },
+  successMessage: {
+    color: "#16a34a",
+    backgroundColor: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+    fontSize: 13,
+    marginTop: 10,
+    marginBottom: 6,
+    padding: "8px 12px",
+    borderRadius: 6,
+    textAlign: "center",
   },
   serverError: {
     color: "#b91c1c",

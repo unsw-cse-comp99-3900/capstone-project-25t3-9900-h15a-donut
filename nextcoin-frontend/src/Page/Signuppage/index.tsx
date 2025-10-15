@@ -12,6 +12,7 @@ export default function SignupPage() {
 
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [touched, setTouched] = useState({
     name: false,
     email: false,
@@ -78,6 +79,7 @@ export default function SignupPage() {
     e.preventDefault();
     setTouched({ name: true, email: true, password: true, confirm: true });
     setServerError(null);
+    setSuccessMessage(null);
     if (!formValid) return;
 
     try {
@@ -101,7 +103,11 @@ export default function SignupPage() {
           );
         }
 
-        navigate("/dashboard");
+        setSuccessMessage("Registration successful~ Loading...");
+
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 1500);
       } else {
         throw new Error("Login failed after registration");
       }
@@ -210,6 +216,11 @@ export default function SignupPage() {
               <div style={styles.inlineError}>{confirmError}</div>
             )}
 
+            {/* Success message */}
+            {successMessage && (
+              <div style={styles.successMessage}>{successMessage}</div>
+            )}
+
             {/* Server error */}
             {serverError && <div style={styles.serverError}>{serverError}</div>}
 
@@ -308,6 +319,17 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: "0 0 0 3px rgba(239,68,68,0.12)",
   },
   inlineError: { color: "#ef4444", fontSize: 12, marginTop: 6 },
+  successMessage: {
+    color: "#16a34a",
+    backgroundColor: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+    fontSize: 13,
+    marginTop: 10,
+    marginBottom: 6,
+    padding: "8px 12px",
+    borderRadius: 6,
+    textAlign: "center",
+  },
   serverError: {
     color: "#b91c1c",
     fontSize: 13,
